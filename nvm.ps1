@@ -154,7 +154,7 @@ function Install($Version) {
 
     Write-Host "Extracting npm..."
     $ZipFile = [System.IO.Compression.ZipFile]::OpenRead($Output)
-    $NPMDir = $OutputDir + "/npm_modules/npm"
+    $NPMDir = $OutputDir + "/node_modules/npm"
 
     # That extraction method may seem a bit weird, but it's to counter the effects of the
     # built-in Zip code not able to handle paths that are too long. So we extract each files
