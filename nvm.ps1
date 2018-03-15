@@ -42,8 +42,9 @@ function Add-Path($Path) {
 }
 
 function MkDir-p($Path) {
-    if (-not (Test-Path -Path $Path)) {
-        New-Item -ItemType directory -Path ("\\?\" + $Path) | Out-Null
+    $FullPath = "\\?\" + $Path
+    if (-not (Test-Path -Path $FullPath)) {
+        New-Item -ItemType directory -Path $FullPath | Out-Null
     }
 }
 
@@ -65,6 +66,17 @@ function Download-Index($Path) {
     Invoke-WebRequest -ContentType "application/octet-stream" -Uri $FullURL -OutFile $IndexFile
 }
 
+function Sort-Versions($Data) {
+    $Versions = @()
+    ForEach ($Version in $Data) {
+        [Int]$Major, [Int]$Minor, [Int]$Patch = $Version.version.TrimStart("v").Split(".")
+        $Key = $Major * 10000 + $Minor * 100 + $Patch
+        $Version | Add-Member Key $Key
+        $Versions += $Version
+    }
+    return $Versions | Sort-Object -Descending -Property Key
+}
+
 # Downloads the index, and assign a version number to it that can be easily sorted.
 # This way doing npm install 8 will install the latest version of 8.
 function Load-Index($Path) {
@@ -73,14 +85,7 @@ function Load-Index($Path) {
         Download-Index($Path)
     }
     $RawData = (Get-Content $IndexFile) -join "`n" | ConvertFrom-Json
-    $Versions = @()
-    ForEach ($Version in $RawData) {
-        [Int]$Major, [Int]$Minor, [Int]$Patch = $Version.version.TrimStart("v").Split(".")
-        $Key = $Major * 10000 + $Minor * 100 + $Patch
-        $Version | Add-Member Key $Key
-        $Versions += $Version
-    }
-    return $Versions | Sort-Object -Descending -Property Key
+    return Sort-Versions $RawData
 }
 
 function New-TempDir {
@@ -132,6 +137,34 @@ function Locate-Version($Version) {
     return $NULL
 }
 
+# Will change the symlink to another version of node. We're currently not checking if that
+# version is indeed installed. TODO: check if the version is actually there.
+function Use($Version) {
+    [string]$Version = $Version
+    if (!$Version.StartsWith("v")) {
+        $Installed = Get-ChildItem $VersionsPath | Select-Object Name
+        $Versions = @()
+        ForEach ($Iterator in $Installed) {
+            $Object = New-Object PSObject
+            $Object | Add-Member version $Iterator.Name
+            $Versions += $Object
+        }
+        $Versions = Sort-Versions $Versions
+        $Version = "v" + $Version
+        ForEach ($Iterator in $Versions) {
+            if ($Iterator.version.StartsWith($Version)) {
+                $Version = $Iterator.version
+                break
+            }
+        }
+    }
+    $VersionPath = $VersionsPath + "/" + $Version
+    if (Test-Path -Path $symlink) {
+        Remove-Item -Path $symlink -Recurse -Force
+    }
+    New-Item -Force -Path $symlink -ItemType Junction -Value $VersionPath
+}
+
 # Will attempt to download and install the version of node specified by $Version.
 function Install($Version) {
     $Version = Locate-Version $Version
@@ -143,6 +176,7 @@ function Install($Version) {
     $OutputDir = $cwd + "/versions/" + $Version.version
     MkDir-p $OutputDir
     $Output = $OutputDir + "/node.exe"
+    $NodeRuntime = $Output
     Write-Host "Downloading node.exe..."
     Invoke-WebRequest -ContentType "application/octet-stream" -Uri $NodeURL -OutFile $Output
 
@@ -152,9 +186,9 @@ function Install($Version) {
     Write-Host "Downloading npm.zip..."
     Invoke-WebRequest -ContentType "application/octet-stream" -Uri $NPMURL -OutFile $Output
 
-    Write-Host "Extracting npm..."
+    Write-Host "Extracting npm bootstrap..."
     $ZipFile = [System.IO.Compression.ZipFile]::OpenRead($Output)
-    $NPMDir = $OutputDir + "/node_modules/npm"
+    $NPMDir = $OutputDir + "/node_modules/npm-bootstrap"
 
     # That extraction method may seem a bit weird, but it's to counter the effects of the
     # built-in Zip code not able to handle paths that are too long. So we extract each files
@@ -177,22 +211,18 @@ function Install($Version) {
     Remove-Item -Path $TempDir -Force | Out-Null
     $VersionString = $Version.version
 
-    ForEach($File in (Get-ChildItem ($NPMDir + "/bin") | Where-Object {$_.Name.EndsWith(".cmd")})) {
-        Move-Item -Force -Path ($NPMDir + "/bin/" + $File) -Destination $OutputDir
-    }
+    $NPMCLI = $NPMDir + "/bin/npm-cli.js"
+    $NPMVersion = $Version.npm
+
+    Write-Host "Re-installing npm with itself..."
+    Invoke-Expression -Command "$NodeRuntime $NPMCLI install -g npm@$NPMVersion"
+
+    Write-Host "Removing bootstrap..."
+    Remove-Item ("\\?\" + $NPMDir) -Force -Recurse
 
     Write-Host "Done - NodeJS $VersionString installed."
+    Use $VersionString
     return $TRUE
-}
-
-# Will change the symlink to another version of node. We're currently not checking if that
-# version is indeed installed. TODO: check if the version is actually there.
-function Use($Version) {
-    $VersionPath = $VersionsPath + "/" + $Version
-        if (Test-Path -Path $symlink) {
-                Remove-Item -Path $symlink -Recurse -Force
-        }
-    New-Item -Force -Path $symlink -ItemType Junction -Value $VersionPath
 }
 
 $dest = Get-AbsolutePath ([Environment]::GetFolderPath('ApplicationData') + "/nvm-ps")
