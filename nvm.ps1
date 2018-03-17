@@ -20,6 +20,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 #>
 
+if ((-not (Get-Variable PSVersionTable -Scope Global -ErrorAction SilentlyContinue)) -or ($PSVersionTable.PSVersion.Major -lt 5)) {
+    Write-Host "Your version of PowerShell is too old."
+    Write-Host "nvm-ps requires a least PowerShell 5.0"
+    Write-Host "You need to download and install Windows Management Framework 5.0+"
+    exit
+}
+
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 function Get-AbsolutePath($Path) {
     $Path = [System.IO.Path]::Combine(((pwd).path), ($Path))
