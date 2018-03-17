@@ -18,3 +18,6 @@ Just like the normal nvm, you should be able to run commands such as `nvm instal
 
 ### Who ?
 My name is Nicolas Noble, I write code for a living, and I need software that Just Works For Me. This is my very first exposure to PowerShell, so please be gentle.
+
+### Caveats
+nvm-ps can only work with PowerShell 5.0 at a minimum. The first versions of Windows that comes with an appropriate version of PowerShell out of the box are Windows 10 and Windows Server 2016. It is possible to install it on any version of Windows supported by nodejs by installing [Windows Management Framework 5.1](https://www.microsoft.com/en-us/download/details.aspx?id=54616).
