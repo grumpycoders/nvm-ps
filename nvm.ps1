@@ -307,8 +307,6 @@ switch ($cmd) {
             Add-Path $dest
             Add-Path $symlink
             Write-Host "Done. Open a new console and type nvm."
-            "Press any key to exit..."
-            [void][System.Console]::ReadKey($true)
         }
     }
     default {
