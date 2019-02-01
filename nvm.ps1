@@ -239,7 +239,7 @@ if ($me -eq $NULL) {
 }
 $HasX64 = [Environment]::Is64BitOperatingSystem
 $NodeBaseURL = "https://nodejs.org/download/release/"
-$NPMBaseURL = "https://github.com/npm/npm/archive/"
+$NPMBaseURL = "https://github.com/npm/cli/archive/"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
 $MyURI = "https://raw.githubusercontent.com/grumpycoders/nvm-ps/master/nvm.ps1"
