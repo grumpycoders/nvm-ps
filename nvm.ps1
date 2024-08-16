@@ -221,6 +221,23 @@ function Install($Version) {
     $NPMCLI = $NPMDir + "/bin/npm-cli.js"
     $NPMVersion = $Version.npm
 
+    Write-Host "Adjusting npm bootstrap..."
+    $WorkspacesConfig = $NPMDir + "/workspaces/config"
+    if (Test-Path -Path $WorkspacesConfig) {
+        $DestDir = $NPMDir + "/node_modules/@npmcli"
+        Copy-Item -Recurse -Force -Path ("\\?\" + $WorkspacesConfig) -Destination ("\\?\" + $DestDir)
+    }
+    $WorkspacesLibnpmfund = $NPMDir + "/workspaces/libnpmfund"
+    if (Test-Path -Path $WorkspacesLibnpmfund) {
+        $DestDir = $NPMDir + "/node_modules"
+        Copy-Item -Recurse -Force -Path ("\\?\" + $WorkspacesLibnpmfund) -Destination ("\\?\" + $DestDir)
+    }
+    $WorkspacesArborist = $NPMDir + "/workspaces/arborist"
+    if (Test-Path -Path $WorkspacesArborist) {
+        $DestDir = $NPMDir + "/node_modules/@npmcli"
+        Copy-Item -Recurse -Force -Path ("\\?\" + $WorkspacesArborist) -Destination ("\\?\" + $DestDir)
+    }
+
     Write-Host "Re-installing npm with itself..."
     Invoke-Expression -Command "$NodeRuntime $NPMCLI install -g npm@$NPMVersion"
 
